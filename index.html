@@ -6728,104 +6728,20 @@ document.addEventListener("keydown", (e) => {
     lookupChineseWord(token.text,subtitleIndex,tokenElement);
   }
 
-  function ensureChineseVocabVideoOverlay() {
-    const video = document.getElementById('video-container');
-    if (!video) return null;
-    let overlay = document.getElementById('chinese-vocab-video-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'chinese-vocab-video-overlay';
-      overlay.hidden = true;
-      overlay.setAttribute('role', 'status');
-      overlay.setAttribute('aria-live', 'polite');
-      video.appendChild(overlay);
-    }
-    return overlay;
-  }
-
-  function updateChineseVocabVideoOverlay(index) {
-    const overlay = ensureChineseVocabVideoOverlay();
-    if (!overlay) return;
-    const sub = subtitleData?.[Number(index)];
-    if (!sub) {
-      overlay.hidden = true;
-      overlay.replaceChildren();
-      return;
-    }
-
-    const normalize = value => String(value || '').normalize('NFKC')
-      .replace(/[\s\u200b-\u200d，。！？、；：,.!?;:'"“”‘’（）()【】\[\]{}<>]/g, '');
-    const subtitleText = normalize(getChineseText(sub));
-    const items = new Map();
-
-    // Prefer explicit subtitle links, and recover older linked records by
-    // checking the Chinese word against the current subtitle text.
-    (typeof getVocabsForSubtitleIndex === 'function' ? getVocabsForSubtitleIndex(Number(index)) : [])
-      .forEach(item => {
-        const word = String(item?.word || '').trim();
-        if (word && !items.has(normalize(word))) items.set(normalize(word), item);
-      });
-    (Array.isArray(vocabList) ? vocabList : []).forEach(item => {
-      const word = String(item?.word || '').trim();
-      const key = normalize(word);
-      if (!key || !subtitleText.includes(key) || items.has(key)) return;
-      const isAnchored = Array.isArray(item.savedIndexes) && item.savedIndexes.includes(Number(index))
-        || Array.isArray(item.subtitleAnchors) && item.subtitleAnchors.some(anchor => Number(anchor?.subtitleIndex) === Number(index));
-      if (item.isLinked || isAnchored) items.set(key, item);
-    });
-
-    overlay.replaceChildren();
-    if (!items.size) {
-      overlay.hidden = true;
-      return;
-    }
-
-    const heading = document.createElement('div');
-    heading.className = 'cs-video-vocab-heading';
-    heading.textContent = '📚 Từ vựng trong phụ đề';
-    overlay.appendChild(heading);
-    items.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'cs-video-vocab-row';
-      const word = document.createElement('strong');
-      word.className = 'cs-video-vocab-word';
-      word.textContent = String(item.word || '');
-      row.appendChild(word);
-      const pinyin = String(item.pinyin || dict[item.word]?.pinyin || offlineDict[item.word]?.pinyin || '').trim();
-      if (pinyin) {
-        const reading = document.createElement('span');
-        reading.className = 'cs-video-vocab-pinyin';
-        reading.textContent = ` ${pinyin}`;
-        row.appendChild(reading);
-      }
-      const meaningText = typeof getVietnameseVocabMeaning === 'function'
-        ? getVietnameseVocabMeaning(item)
-        : String(item.meaning || '').trim();
-      if (meaningText) {
-        const meaning = document.createElement('span');
-        meaning.className = 'cs-video-vocab-meaning';
-        meaning.textContent = ` — ${meaningText}`;
-        row.appendChild(meaning);
-      }
-      overlay.appendChild(row);
-    });
-    overlay.hidden = false;
-  }
-
-  function syncVocabInfoPanelWithVideoOverlay() {
+  function restoreVocabInfoAboveVideo() {
     const overlay = document.getElementById('chinese-vocab-video-overlay');
+    if (overlay) overlay.remove();
     const panel = document.getElementById('vocab-info-display');
     if (!panel) return;
-    const duplicateDisplay = !!overlay && !overlay.hidden;
     ['.vocab-batch-summary', '.vocab-batch-list'].forEach(selector => {
       const element = panel.querySelector(selector);
-      if (element) element.style.display = duplicateDisplay ? 'none' : '';
+      if (element) element.style.display = '';
     });
   }
 
   function updateChineseSubtitleDisplay(index) {
     const host=document.getElementById('subtitle-display'); if(!host) return;
-    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();updateChineseVocabVideoOverlay(-1);syncVocabInfoPanelWithVideoOverlay();return;}
+    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();restoreVocabInfoAboveVideo();return;}
     const count=Math.max(1,Math.min(50,Number(subtitleDisplayLineCount)||5));
     const start=Math.max(0,Math.min(index-Math.floor((count-1)/2),subtitleData.length-count));
     const end=Math.min(subtitleData.length-1,start+count-1);
@@ -6844,8 +6760,8 @@ document.addEventListener("keydown", (e) => {
         displayVocabInfoForPlaybackIndex(index);
       }
     } catch (e) { console.warn('Không cập nhật panel từ vựng theo phụ đề:', e); }
-    try { updateChineseVocabVideoOverlay(index); syncVocabInfoPanelWithVideoOverlay(); }
-    catch (e) { console.warn('Không cập nhật từ vựng nổi trên video:', e); }
+    try { restoreVocabInfoAboveVideo(); }
+    catch (e) { console.warn('Không cập nhật panel từ vựng phía trên video:', e); }
     if (floatingLookupEnabled) {
       if (Number(floatingLookupAnchorSubtitle) !== Number(index)) {
         hideFloatingLookup();
@@ -6928,14 +6844,8 @@ document.addEventListener("keydown", (e) => {
 
   function installUI(){
     document.title='ChineseStudy – Học tiếng Trung qua YouTube';document.documentElement.lang='vi';
+    document.getElementById('chinese-vocab-video-overlay')?.remove();
     const style=document.createElement('style');style.textContent=`
-      #chinese-vocab-video-overlay{position:absolute;z-index:20;top:48px;right:8px;left:auto;bottom:auto;width:max-content;max-width:calc(100% - 16px);max-height:28%;overflow:auto;box-sizing:border-box;padding:6px 8px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(15,23,42,.8);color:#fff;text-align:left;font:12px/1.4 Arial,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.25);pointer-events:none}
-      #chinese-vocab-video-overlay[hidden]{display:none!important}
-      .cs-video-vocab-heading{font-weight:700;color:#b7e4ff;margin-bottom:3px}
-      .cs-video-vocab-row{overflow-wrap:anywhere}
-      .cs-video-vocab-word{color:#ffe082;font-size:1.08em}
-      .cs-video-vocab-pinyin{color:#c4f1f9;font-size:.9em}
-      .cs-video-vocab-meaning{color:#fff}
       .cs-panel{margin:14px 0;padding:14px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fbff;text-align:left;color:#172033}
       .cs-panel h3{margin:0 0 9px}.cs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cs-row>*{flex:1;min-width:120px}
       .cs-panel button,.cs-detail-actions button{border:0;border-radius:8px;padding:9px 11px;background:#1769aa;color:white;cursor:pointer}

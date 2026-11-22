@@ -2182,7 +2182,7 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
                 existing.isLinked=matches.length>0;
                 if(matches.length) linkedWords++; else unmatched++;
                 if(container){
-                    const div=document.createElement('div');div.className='clickable-vocab';div.style.cssText='padding:8px;border-bottom:1px solid #ddd;';
+                    const div=document.createElement('div');div.className='clickable-vocab';div.dataset.word=word;div.dataset.meaning=item.meaning||existing.meaning||'';div.style.cssText='padding:8px;border-bottom:1px solid #ddd;';
                     const label=document.createElement('span');label.textContent=`${word} — ${item.meaning||existing.meaning||'Chưa có nghĩa'} (${matches.length} vị trí)`;div.appendChild(label);
                     if(matches.length){const btn=document.createElement('button');btn.type='button';btn.textContent='▶ Đến phụ đề';btn.style.cssText='width:auto;margin:5px;padding:5px 9px;background:#1976d2;color:white;border:0;border-radius:5px;';btn.onclick=()=>{const idx=matches[0];currentSubtitleIndex=idx;try{if(youtubePlayer&&subtitleData[idx])youtubePlayer.seekTo(subtitleData[idx].startTime,true);}catch(_){}if(typeof updateChineseSubtitleDisplay==='function')updateChineseSubtitleDisplay(idx);if(typeof highlightSubtitle==='function')highlightSubtitle(idx);};div.appendChild(btn);}
                     container.appendChild(div);
@@ -5110,28 +5110,87 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
            }
        }
 
+        function getVocabItemsForTTS() {
+            const byWord = new Map();
+            const normalize = value => String(value || "").normalize("NFKC").replace(/\s/g, "");
+
+            // ChineseStudy and NotebookLM save their reviewed words in vocabList.
+            // Do not require the legacy .clickable-vocab markup to exist.
+            (Array.isArray(vocabList) ? vocabList : []).forEach(item => {
+                const word = String(item?.word || "").trim();
+                if (!word || !/[\u3400-\u9fff\u{20000}-\u{2a6df}]/u.test(word)) return;
+                const key = normalize(word);
+                if (!key || byWord.has(key)) return;
+                const meaning = typeof getVietnameseVocabMeaning === "function"
+                    ? getVietnameseVocabMeaning(item)
+                    : String(item.meaning || "").trim();
+                byWord.set(key, { word, vietnamese: String(meaning || "").trim() });
+            });
+
+            if (byWord.size) return Array.from(byWord.values());
+
+            // Compatibility with vocabulary linked by the older form.
+            const container = document.getElementById("linked-vocab-list");
+            const cards = Array.from(container?.querySelectorAll(".clickable-vocab") || []);
+            cards.forEach(div => {
+                const label = div.querySelector("span")?.textContent || div.textContent || "";
+                const match = label.match(/^(.+?)\s+[—–-]\s+(.+?)(?:\s+\(\d+\s+vị trí\))?$/);
+                const word = String(div.dataset.word || match?.[1] || "").trim();
+                const vietnamese = String(div.dataset.meaning || match?.[2] || "").trim();
+                const key = normalize(word);
+                if (word && key && !byWord.has(key)) byWord.set(key, { word, vietnamese });
+            });
+            return Array.from(byWord.values());
+        }
+
+        function renderVocabTTSList(vocabItems) {
+            const container = document.getElementById("linked-vocab-list");
+            if (!container) return;
+            container.replaceChildren();
+            const items = Array.isArray(vocabItems) ? vocabItems : getVocabItemsForTTS();
+            const normalize = value => String(value || "").normalize("NFKC").replace(/\s/g, "");
+            items.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "clickable-vocab";
+                card.dataset.word = item.word;
+                card.dataset.meaning = item.vietnamese || "";
+                card.style.cssText = "padding:8px;border-bottom:1px solid #ddd;";
+                const label = document.createElement("span");
+                label.textContent = `${item.word} — ${item.vietnamese || "Chưa có nghĩa"}`;
+                card.appendChild(label);
+                const key = normalize(item.word);
+                const subtitleIndex = (Array.isArray(subtitleData) ? subtitleData : []).findIndex(sub => {
+                    const text = typeof getChineseText === "function"
+                        ? getChineseText(sub)
+                        : String(sub?.originalText || sub?.chineseText || sub?.koreanText || sub?.text || "");
+                    return normalize(text).includes(key);
+                });
+                if (subtitleIndex >= 0) {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.textContent = "▶ Đến phụ đề";
+                    button.style.cssText = "width:auto;margin:5px;padding:5px 9px;background:#1976d2;color:white;border:0;border-radius:5px;";
+                    button.onclick = () => {
+                        const sub = subtitleData[subtitleIndex];
+                        currentSubtitleIndex = subtitleIndex;
+                        try { if (youtubePlayer && sub) youtubePlayer.seekTo(sub.startTime, true); } catch (_) {}
+                        if (typeof window.updateSubtitleDisplay === "function") window.updateSubtitleDisplay(subtitleIndex);
+                    };
+                    card.appendChild(button);
+                }
+                container.appendChild(card);
+            });
+        }
+
         function startVocabTTS() {
             if (!vocabTTSMode) return;
 
-            const container = document.getElementById("linked-vocab-list");
-            const items = Array.from(container.querySelectorAll(".clickable-vocab"));
-            if (items.length === 0) {
-                alert("Không có từ vựng để đọc! Hãy nhấn 'Liên kết từ vựng với phụ đề' trước.");
-                return;
-           }
-
-            const vocabItems = items.map(div => {
-                const parts = div.textContent.split("-");
-                return {
-                    korean: parts[0]?.trim() || "",
-                    vietnamese: parts.slice(1).join("-").trim() || ""
-               };
-           }).filter(item => item.korean);
-
+            const vocabItems = getVocabItemsForTTS();
             if (vocabItems.length === 0) {
-                alert("Không tìm thấy từ vựng hợp lệ!");
+                alert("Chưa có từ vựng tiếng Trung để đọc. Hãy thêm từ vào danh sách hoặc liên kết từ với phụ đề trước.");
                 return;
-           }
+            }
+            renderVocabTTSList(vocabItems);
 
             isVocabTTSPaused = false;
             vocabTTSIndex = pausedVocabIndex >= 0 ? pausedVocabIndex : 0;
@@ -5147,23 +5206,46 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
             const item = vocabItems[vocabTTSIndex];
             highlightCurrentVocabItem(vocabTTSIndex);
 
-            const textToRead = `${item.korean} - ${item.vietnamese}`;
             let itemDone = false;
-            readTextDual(textToRead, () => {
+            const finishItem = () => {
                 if (itemDone || runToken !== vocabTTSRunToken) return;
                 itemDone = true;
                 vocabTTSIndex++;
                 if (vocabTTSIndex < vocabItems.length && !isVocabTTSPaused) {
                     vocabTTSTimeout = setTimeout(() => readVocabItem(vocabItems, runToken), 500);
                }
-           }, VOCAB_TTS_RATE);
+            };
+            const speakChinese = window.ChineseStudy?.speakChineseText;
+            const speakVietnamese = window.ChineseStudy?.speakVietnameseText;
+            try {
+                if (typeof speakChinese === "function") {
+                    speakChinese(item.word, () => {
+                        if (runToken !== vocabTTSRunToken) return;
+                        if (item.vietnamese && typeof speakVietnamese === "function") {
+                            speakVietnamese(item.vietnamese, finishItem, VOCAB_TTS_RATE);
+                        } else {
+                            finishItem();
+                        }
+                    }, VOCAB_TTS_RATE);
+                } else {
+                    readTextDual(`${item.word} - ${item.vietnamese || ""}`, finishItem, VOCAB_TTS_RATE);
+                }
+            } catch (e) {
+                console.warn("Không đọc được mục từ vựng:", e);
+                finishItem();
+            }
        }
 
         function highlightCurrentVocabItem(index) {
             const container = document.getElementById("linked-vocab-list");
-            const items = container.querySelectorAll(".clickable-vocab");
+            const items = Array.from(container?.querySelectorAll(".clickable-vocab") || []);
+            const targetWord = getVocabItemsForTTS()[index]?.word;
+            const normalize = value => String(value || "").normalize("NFKC").replace(/\s/g, "");
             items.forEach((item, i) => {
-                item.style.backgroundColor = i === index ? "#d0e8ff" : "";
+                const isCurrent = targetWord
+                    ? normalize(item.dataset.word) === normalize(targetWord)
+                    : i === index;
+                item.style.backgroundColor = isCurrent ? "#d0e8ff" : "";
            });
        }
 
@@ -5175,20 +5257,30 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
             if (isVocabTTSPaused) {
                 pausedVocabIndex = vocabTTSIndex;
                 vocabTTSRunToken++;
-                speechSynthesis.cancel();
+                cancelVocabTTSAudio();
                 clearTimeout(vocabTTSTimeout);
            } else {
                 startVocabTTS();
            }
        }
 
+        function cancelVocabTTSAudio() {
+            try { if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel(); } catch (_) {}
+            if (onlineTTSVoice) {
+                try { onlineTTSVoice.pause(); onlineTTSVoice.currentTime = 0; } catch (_) {}
+                onlineTTSVoice = null;
+            }
+        }
+
         function stopVocabTTS() {
             isVocabTTSPaused = false;
             vocabTTSIndex = -1;
             pausedVocabIndex = -1;
             vocabTTSRunToken++;
-            speechSynthesis.cancel();
+            cancelVocabTTSAudio();
             clearTimeout(vocabTTSTimeout);
+            const pauseButton = document.getElementById("pause-vocab-tts");
+            if (pauseButton) pauseButton.textContent = "Tạm dừng";
             highlightCurrentVocabItem(-1);
        }
 
@@ -6636,9 +6728,93 @@ document.addEventListener("keydown", (e) => {
     lookupChineseWord(token.text,subtitleIndex,tokenElement);
   }
 
+  function ensureChineseVocabVideoOverlay() {
+    const video = document.getElementById('video-container');
+    if (!video) return null;
+    let overlay = document.getElementById('chinese-vocab-video-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'chinese-vocab-video-overlay';
+      overlay.hidden = true;
+      overlay.setAttribute('role', 'status');
+      overlay.setAttribute('aria-live', 'polite');
+      video.appendChild(overlay);
+    }
+    return overlay;
+  }
+
+  function updateChineseVocabVideoOverlay(index) {
+    const overlay = ensureChineseVocabVideoOverlay();
+    if (!overlay) return;
+    const sub = subtitleData?.[Number(index)];
+    if (!sub) {
+      overlay.hidden = true;
+      overlay.replaceChildren();
+      return;
+    }
+
+    const normalize = value => String(value || '').normalize('NFKC')
+      .replace(/[\s\u200b-\u200d，。！？、；：,.!?;:'"“”‘’（）()【】\[\]{}<>]/g, '');
+    const subtitleText = normalize(getChineseText(sub));
+    const items = new Map();
+
+    // Prefer explicit subtitle links, and recover older linked records by
+    // checking the Chinese word against the current subtitle text.
+    (typeof getVocabsForSubtitleIndex === 'function' ? getVocabsForSubtitleIndex(Number(index)) : [])
+      .forEach(item => {
+        const word = String(item?.word || '').trim();
+        if (word && !items.has(normalize(word))) items.set(normalize(word), item);
+      });
+    (Array.isArray(vocabList) ? vocabList : []).forEach(item => {
+      const word = String(item?.word || '').trim();
+      const key = normalize(word);
+      if (!key || !subtitleText.includes(key) || items.has(key)) return;
+      const isAnchored = Array.isArray(item.savedIndexes) && item.savedIndexes.includes(Number(index))
+        || Array.isArray(item.subtitleAnchors) && item.subtitleAnchors.some(anchor => Number(anchor?.subtitleIndex) === Number(index));
+      if (item.isLinked || isAnchored) items.set(key, item);
+    });
+
+    overlay.replaceChildren();
+    if (!items.size) {
+      overlay.hidden = true;
+      return;
+    }
+
+    const heading = document.createElement('div');
+    heading.className = 'cs-video-vocab-heading';
+    heading.textContent = '📚 Từ vựng trong phụ đề';
+    overlay.appendChild(heading);
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'cs-video-vocab-row';
+      const word = document.createElement('strong');
+      word.className = 'cs-video-vocab-word';
+      word.textContent = String(item.word || '');
+      row.appendChild(word);
+      const pinyin = String(item.pinyin || dict[item.word]?.pinyin || offlineDict[item.word]?.pinyin || '').trim();
+      if (pinyin) {
+        const reading = document.createElement('span');
+        reading.className = 'cs-video-vocab-pinyin';
+        reading.textContent = ` ${pinyin}`;
+        row.appendChild(reading);
+      }
+      const meaningText = typeof getVietnameseVocabMeaning === 'function'
+        ? getVietnameseVocabMeaning(item)
+        : String(item.meaning || '').trim();
+      if (meaningText) {
+        const meaning = document.createElement('span');
+        meaning.className = 'cs-video-vocab-meaning';
+        meaning.textContent = ` — ${meaningText}`;
+        row.appendChild(meaning);
+      }
+      overlay.appendChild(row);
+    });
+    overlay.hidden = false;
+  }
+
   function updateChineseSubtitleDisplay(index) {
     const host=document.getElementById('subtitle-display'); if(!host) return;
-    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();return;}
+    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();updateChineseVocabVideoOverlay(-1);return;}
     const count=Math.max(1,Math.min(50,Number(subtitleDisplayLineCount)||5));
     const start=Math.max(0,Math.min(index-Math.floor((count-1)/2),subtitleData.length-count));
     const end=Math.min(subtitleData.length-1,start+count-1);
@@ -6657,6 +6833,8 @@ document.addEventListener("keydown", (e) => {
         displayVocabInfoForPlaybackIndex(index);
       }
     } catch (e) { console.warn('Không cập nhật panel từ vựng theo phụ đề:', e); }
+    try { updateChineseVocabVideoOverlay(index); }
+    catch (e) { console.warn('Không cập nhật từ vựng nổi trên video:', e); }
     if (floatingLookupEnabled) {
       if (Number(floatingLookupAnchorSubtitle) !== Number(index)) {
         hideFloatingLookup();
@@ -6740,6 +6918,13 @@ document.addEventListener("keydown", (e) => {
   function installUI(){
     document.title='ChineseStudy – Học tiếng Trung qua YouTube';document.documentElement.lang='vi';
     const style=document.createElement('style');style.textContent=`
+      #chinese-vocab-video-overlay{position:absolute;z-index:20;left:10px;right:10px;bottom:54px;max-height:42%;overflow:auto;box-sizing:border-box;padding:8px 10px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:rgba(15,23,42,.88);color:#fff;text-align:left;font:14px/1.45 Arial,sans-serif;box-shadow:0 3px 14px rgba(0,0,0,.3);pointer-events:none}
+      #chinese-vocab-video-overlay[hidden]{display:none!important}
+      .cs-video-vocab-heading{font-weight:700;color:#b7e4ff;margin-bottom:3px}
+      .cs-video-vocab-row{overflow-wrap:anywhere}
+      .cs-video-vocab-word{color:#ffe082;font-size:1.08em}
+      .cs-video-vocab-pinyin{color:#c4f1f9;font-size:.9em}
+      .cs-video-vocab-meaning{color:#fff}
       .cs-panel{margin:14px 0;padding:14px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fbff;text-align:left;color:#172033}
       .cs-panel h3{margin:0 0 9px}.cs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cs-row>*{flex:1;min-width:120px}
       .cs-panel button,.cs-detail-actions button{border:0;border-radius:8px;padding:9px 11px;background:#1769aa;color:white;cursor:pointer}
@@ -6765,7 +6950,7 @@ document.addEventListener("keydown", (e) => {
     document.querySelectorAll('body > div').forEach(el=>{if(el.querySelector('#loginBtnMain'))el.style.display='none';});
     const oldNaver=document.getElementById('naver-lookup-toggle'); if(oldNaver){const lab=oldNaver.closest('label');if(lab)lab.style.display='none';}
     const settings=document.getElementById('tts-language'); if(settings){settings.innerHTML='<option value="zh-CN">Tiếng Trung phổ thông (Trung Quốc)</option><option value="zh-TW">Tiếng Trung (Đài Loan)</option><option value="vi-VN">Tiếng Việt</option>';settings.value=ttsLanguage||'vi-VN';}
-    const detail=document.getElementById('vocab-info-display'); if(detail){detail.innerHTML='Nhấn vào một từ tiếng Trung trong phụ đề để xem Pinyin và nghĩa.';if(detail.parentElement)detail.parentElement.style.display='none';}
+    const detail=document.getElementById('vocab-info-display'); if(detail){detail.innerHTML='Nhấn vào một từ tiếng Trung trong phụ đề để xem Pinyin và nghĩa.';}
     const toggle=document.getElementById('vocab-display-mode');if(toggle){toggle.checked=true;const lab=toggle.closest('label');if(lab&&lab.lastChild&&lab.lastChild.nodeType===3)lab.lastChild.textContent=' Chỉ hiển thị thông tin từ điển';}
     const target=document.getElementById('subtitle-display');
     if(target){const panel=document.createElement('section');panel.className='cs-panel';panel.id='chinese-study-tools';panel.innerHTML=`<h3>中文 ChineseStudy V1.1 – Công cụ học tiếng Trung</h3><div class="cs-row"><label>Kiểu chữ<select id="cs-script-mode"><option value="both">Song song giản thể / phồn thể</option><option value="simplified">Giản thể</option><option value="traditional">Chỉ phồn thể (chuyển đổi cơ bản)</option></select></label><label>Bộ HSK<select id="cs-hsk-version"><option value="both">HSK 2.0 + HSK 3.0</option><option value="2">HSK 2.0</option><option value="3">HSK 3.0</option></select></label><label>Lọc cấp độ<select id="cs-hsk-level"><option value="all">Tất cả cấp độ</option><option value="1">HSK 1</option><option value="2">HSK 2</option><option value="3">HSK 3</option><option value="4">HSK 4</option><option value="5">HSK 5</option><option value="6">HSK 6</option><option value="7">HSK 7</option><option value="8">HSK 8</option><option value="9">HSK 9</option></select></label></div><div class="cs-row" style="margin-top:8px"><button id="cs-phrase-toggle" type="button">Chọn cụm từ: Bật</button><button type="button" onclick="ChineseStudy.openFlashcards()">🗂 Ôn flashcard</button><button type="button" onclick="ChineseStudy.exportData()">⬇ Xuất dữ liệu</button></div><div id="cs-phrase-status" class="cs-meta">Chế độ chọn cụm đang bật mặc định. Nhấn từ đầu tiên, sau đó nhấn từ cuối cụm để tra cứu.</div><div id="chinese-word-detail" class="cs-panel" style="display:none;background:white;margin-top:10px"></div><div class="cs-row"><label>Nhập dữ liệu HSK JSON<input id="cs-hsk-file" type="file" accept=".json,application/json"></label><label>Nhập từ điển JSON<input id="cs-dict-file" type="file" accept=".json,application/json"></label></div><div class="cs-meta">Từ điển có bộ từ khởi đầu, cache nghĩa trực tuyến và ưu tiên nghĩa nội bộ cho chữ đơn đa nghĩa. HSK 2.0/3.0 nhận JSON dạng {"version":"2.0 + 3.0","entries":[{"word":"学习","hsk20":3,"hsk30":3,"pinyin":"xuéxí","meaning":"học tập"}]}. Bộ HSK đầy đủ chưa được nhúng; cần nhập dữ liệu có nguồn xác thực. Chuyển phồn thể hiện là ánh xạ ký tự phổ biến, chưa thay thế OpenCC đầy đủ.</div>`;

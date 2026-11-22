@@ -5212,7 +5212,7 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
                 itemDone = true;
                 vocabTTSIndex++;
                 if (vocabTTSIndex < vocabItems.length && !isVocabTTSPaused) {
-                    vocabTTSTimeout = setTimeout(() => readVocabItem(vocabItems, runToken), 500);
+                    vocabTTSTimeout = setTimeout(() => readVocabItem(vocabItems, runToken), 1000);
                }
             };
             const speakChinese = window.ChineseStudy?.speakChineseText;
@@ -6812,9 +6812,20 @@ document.addEventListener("keydown", (e) => {
     overlay.hidden = false;
   }
 
+  function syncVocabInfoPanelWithVideoOverlay() {
+    const overlay = document.getElementById('chinese-vocab-video-overlay');
+    const panel = document.getElementById('vocab-info-display');
+    if (!panel) return;
+    const duplicateDisplay = !!overlay && !overlay.hidden;
+    ['.vocab-batch-summary', '.vocab-batch-list'].forEach(selector => {
+      const element = panel.querySelector(selector);
+      if (element) element.style.display = duplicateDisplay ? 'none' : '';
+    });
+  }
+
   function updateChineseSubtitleDisplay(index) {
     const host=document.getElementById('subtitle-display'); if(!host) return;
-    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();updateChineseVocabVideoOverlay(-1);return;}
+    if(!Array.isArray(subtitleData)||!subtitleData.length){host.innerHTML='';hideFloatingLookup();updateChineseVocabVideoOverlay(-1);syncVocabInfoPanelWithVideoOverlay();return;}
     const count=Math.max(1,Math.min(50,Number(subtitleDisplayLineCount)||5));
     const start=Math.max(0,Math.min(index-Math.floor((count-1)/2),subtitleData.length-count));
     const end=Math.min(subtitleData.length-1,start+count-1);
@@ -6833,7 +6844,7 @@ document.addEventListener("keydown", (e) => {
         displayVocabInfoForPlaybackIndex(index);
       }
     } catch (e) { console.warn('Không cập nhật panel từ vựng theo phụ đề:', e); }
-    try { updateChineseVocabVideoOverlay(index); }
+    try { updateChineseVocabVideoOverlay(index); syncVocabInfoPanelWithVideoOverlay(); }
     catch (e) { console.warn('Không cập nhật từ vựng nổi trên video:', e); }
     if (floatingLookupEnabled) {
       if (Number(floatingLookupAnchorSubtitle) !== Number(index)) {
@@ -6918,7 +6929,7 @@ document.addEventListener("keydown", (e) => {
   function installUI(){
     document.title='ChineseStudy – Học tiếng Trung qua YouTube';document.documentElement.lang='vi';
     const style=document.createElement('style');style.textContent=`
-      #chinese-vocab-video-overlay{position:absolute;z-index:20;left:10px;right:10px;bottom:54px;max-height:42%;overflow:auto;box-sizing:border-box;padding:8px 10px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:rgba(15,23,42,.88);color:#fff;text-align:left;font:14px/1.45 Arial,sans-serif;box-shadow:0 3px 14px rgba(0,0,0,.3);pointer-events:none}
+      #chinese-vocab-video-overlay{position:absolute;z-index:20;top:48px;right:8px;left:auto;bottom:auto;width:max-content;max-width:calc(100% - 16px);max-height:28%;overflow:auto;box-sizing:border-box;padding:6px 8px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(15,23,42,.8);color:#fff;text-align:left;font:12px/1.4 Arial,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.25);pointer-events:none}
       #chinese-vocab-video-overlay[hidden]{display:none!important}
       .cs-video-vocab-heading{font-weight:700;color:#b7e4ff;margin-bottom:3px}
       .cs-video-vocab-row{overflow-wrap:anywhere}
@@ -7019,7 +7030,7 @@ document.addEventListener("keydown", (e) => {
   window.readText=(text,callback)=>{ if(typeof getCurrentTTSLanguage==='function' && /^vi/i.test(getCurrentTTSLanguage())) speakVietnameseText(text,callback); else speakChinese(text,callback); };
   window.readTextDual=(text,callback,speed)=>{const clean=String(text||'');const ix=clean.indexOf(' - ');const zh=ix>=0?clean.slice(0,ix):clean;const vi=ix>=0?clean.slice(ix+3):'';speakChinese(zh,()=>{if(vi)speakVietnameseText(vi,callback,speed);else callback?.();},speed);};
   window.ChineseStudy={
-    selectToken,lookup:lookupChineseWord,toTraditional, speak:(text)=>speakChinese(text), speakChineseText:(text)=>speakChinese(text), speakVietnameseText:(text)=>speakVietnameseText(text), speakChineseSubtitle, speakVietnameseSubtitle, saveCurrentWord,openExternal:(word)=>window.open(`https://www.google.com/search?q=${encodeURIComponent(word+' nghĩa tiếng Việt')}`,'_blank','noopener'),
+    selectToken,lookup:lookupChineseWord,toTraditional, speak:(text,callback,rate)=>speakChinese(text,callback,rate), speakChineseText:(text,callback,rate)=>speakChinese(text,callback,rate), speakVietnameseText:(text,callback,rate)=>speakVietnameseText(text,callback,rate), speakChineseSubtitle, speakVietnameseSubtitle, saveCurrentWord,openExternal:(word)=>window.open(`https://www.google.com/search?q=${encodeURIComponent(word+' nghĩa tiếng Việt')}`,'_blank','noopener'),
     openFlashcards,revealFlashcard:()=>{flashRevealed=true;renderFlashcard();},grade:gradeFlashcard,segment:segmentChinese,refreshLexicon:()=>{cachedLexiconTrie=null;},parseSRT:parseSRTChinese,
     exportData:()=>{const payload={app:'ChineseStudy',version:1,exportedAt:new Date().toISOString(),dictionary:dict,hsk:hskData,vocabulary:vocabList||[],flashcards:(()=>{try{return JSON.parse(localStorage.getItem(STORE.cards)||'{}')}catch(_){return {}}})()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ChineseStudy_backup.json';a.click();URL.revokeObjectURL(a.href);}
   };

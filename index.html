@@ -3517,6 +3517,7 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
 
         function speakVietnamese(text, callback, speed = ttsSpeed) {
             if (!text) { callback?.(); return; }
+            let onlineFallback = false;
 
             if (vietnameseTTSMode === "online") {
                 const cleanText = removeBracketsContent(text).trim();
@@ -3544,7 +3545,7 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
                         done = true;
                         if (onlineTTSVoice === audio) onlineTTSVoice = null;
                         console.warn("Online TTS lỗi, chuyển sang Offline.");
-                        speakVietnameseOffline(cleanText, callback, speed);
+                        speakVietnameseOffline(cleanText, callback, speed, true);
                     };
                     audio.onended = finish;
                     audio.onerror = fallbackToOffline;
@@ -3555,26 +3556,75 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
                     return;
                 } catch (e) {
                     console.warn("Online TTS lỗi, chuyển sang Offline:", e);
+                    onlineFallback = true;
                 }
             }
-            speakVietnameseOffline(text, callback, speed);
+            speakVietnameseOffline(text, callback, speed, onlineFallback);
         }
 
-        function speakVietnameseOffline(text, callback, speed = ttsSpeed) {
+        let vietnameseTTSNoticeTimer = null;
+
+        function showVietnameseTTSNotice(onlineFailed = false) {
+            if (!document.body) return;
+            let notice = document.getElementById("cs-vietnamese-tts-notice");
+            if (!notice) {
+                notice = document.createElement("div");
+                notice.id = "cs-vietnamese-tts-notice";
+                notice.setAttribute("role", "status");
+                notice.setAttribute("aria-live", "polite");
+                notice.style.cssText = "position:fixed;z-index:2147483647;left:12px;right:12px;bottom:calc(18px + env(safe-area-inset-bottom, 0px));max-width:560px;margin:0 auto;padding:12px 14px;border-radius:10px;background:#7f1d1d;color:#fff;box-shadow:0 5px 22px rgba(0,0,0,.35);font:14px/1.45 Arial,sans-serif";
+                document.body.appendChild(notice);
+            }
+            notice.textContent = onlineFailed
+                ? "Không phát được TTS online và máy chưa có giọng tiếng Việt. App đã dừng để tránh đọc nhầm tiếng Trung. Hãy cài giọng tiếng Việt trên máy hoặc thử lại khi mạng truy cập được Google TTS."
+                : "Máy chưa có giọng TTS tiếng Việt. App đã dừng để tránh đọc nhầm tiếng Trung. Hãy cài giọng tiếng Việt trong cài đặt chuyển văn bản thành giọng nói của máy, hoặc chọn TTS Online khi có Internet.";
+            notice.hidden = false;
+            clearTimeout(vietnameseTTSNoticeTimer);
+            vietnameseTTSNoticeTimer = setTimeout(() => { notice.hidden = true; }, 9000);
+        }
+
+        function findVietnameseSystemVoice(timeoutMs = 1200) {
+            return new Promise(resolve => {
+                const startedAt = Date.now();
+                let settled = false;
+                const check = () => {
+                    if (settled) return;
+                    let voices = [];
+                    try { voices = speechSynthesis.getVoices() || []; } catch (e) {}
+                    const vi = voices.find(v => String(v.lang || "").toLowerCase() === "vi-vn") ||
+                               voices.find(v => String(v.lang || "").toLowerCase().startsWith("vi"));
+                    if (vi) {
+                        settled = true;
+                        resolve(vi);
+                    } else if (Date.now() - startedAt >= timeoutMs) {
+                        settled = true;
+                        resolve(null);
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+
+        async function speakVietnameseOffline(text, callback, speed = ttsSpeed, onlineFailed = false) {
             try {
                 if (typeof speechSynthesis === "undefined" || !speechSynthesis) {
-                    alert("Thiết bị/trình duyệt không hỗ trợ TTS Offline.");
+                    showVietnameseTTSNotice(onlineFailed);
+                    callback?.();
+                    return;
+                }
+                const vi = await findVietnameseSystemVoice();
+                if (!vi) {
+                    showVietnameseTTSNotice(onlineFailed);
                     callback?.();
                     return;
                 }
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = "vi-VN";
+                utterance.voice = vi;
                 utterance.rate = speed;
                 utterance.volume = ttsVolume;
-                const voices = speechSynthesis.getVoices() || [];
-                const vi = voices.find(v => v.lang === "vi-VN") ||
-                           voices.find(v => v.lang && v.lang.toLowerCase().startsWith("vi"));
-                if (vi) utterance.voice = vi;
                 let done = false;
                 const finish = () => {
                     if (done) return;

@@ -1021,7 +1021,7 @@ body.custom-fullscreen-active {
         </div>
         <div style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>Thông tin từ vựng đã chọn</h3>
+                <h3>📚 Từ vựng liên kết trong phụ đề đang phát</h3>
                 <div>
                     <label style="cursor: pointer;">
                         <input type="checkbox" id="vocab-display-mode" onchange="toggleVocabDisplayMode()" style="margin-right: 5px;">
@@ -1113,6 +1113,26 @@ body.custom-fullscreen-active {
             <button type="button" onclick="previewNotebookGuidance()" style="background:#6a4c93;color:white;border:0;border-radius:8px;padding:9px 12px;">🔍 Thử trích xuất</button>
         </div>
         <div id="notebook-guidance-result" aria-live="polite" style="font-size:13px;margin-top:8px;color:#455a64;"></div>
+    </section>
+    <section id="cn-notebook-extractor" style="margin:14px 0;padding:14px;border:1px solid #9bbbd5;border-radius:14px;background:linear-gradient(180deg,#f4f9ff,#fff);text-align:left;color:#243447;">
+      <h3 style="margin:0 0 8px;text-align:left;">🎯 Trích xuất từ vựng tiếng Trung từ NotebookLM</h3>
+      <p style="margin:6px 0 12px;line-height:1.5;font-size:14px;">Trên Android, cách ổn định nhất là sao chép rồi dán vào các ô bên dưới. Bạn có thể nhập từng cặp hoặc dán cả danh sách/bảng để xem trước.</p>
+      <label style="display:block;font-weight:600;margin:8px 0;">🇨🇳 Từ hoặc cụm từ tiếng Trung
+        <input id="cn-notebook-word-paste" type="text" placeholder="Sao chép rồi dán từ tiếng Trung vào đây" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-top:5px;border:1px solid #9caec0;border-radius:8px;font-size:16px;">
+      </label>
+      <button type="button" onclick="cnNotebookConfirm('word')" style="background:#16734a;color:#fff;border:0;border-radius:8px;padding:11px;width:100%;">✓ Xác nhận từ tiếng Trung</button>
+      <label style="display:block;font-weight:600;margin:10px 0;">🇻🇳 Nghĩa tiếng Việt
+        <textarea id="cn-notebook-meaning-paste" rows="2" placeholder="Sao chép rồi dán nghĩa tiếng Việt vào đây" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-top:5px;border:1px solid #9caec0;border-radius:8px;font-size:16px;"></textarea>
+      </label>
+      <button type="button" onclick="cnNotebookConfirm('meaning')" style="background:#1769aa;color:#fff;border:0;border-radius:8px;padding:11px;width:100%;">✓ Xác nhận nghĩa tiếng Việt</button>
+      <div id="cn-notebook-pair-status" style="padding:9px;background:#eef4f8;border-radius:8px;margin:8px 0;font-size:13px;">Chưa xác nhận cặp từ.</div>
+      <details style="margin:8px 0;"><summary>▶ Hoặc dùng cách bôi đen trực tiếp (nếu muốn)</summary><p style="font-size:13px;">Hãy bôi đen văn bản rồi nhấn nút bên dưới ngay. Nếu trình duyệt Android làm mất vùng chọn, dùng cách sao chép/dán vào hai ô phía trên.</p><div style="display:flex;gap:8px;"><button type="button" onclick="cnNotebookCaptureSelection('word')">Gán vùng chọn là tiếng Trung</button><button type="button" onclick="cnNotebookCaptureSelection('meaning')">Gán vùng chọn là nghĩa Việt</button></div></details>
+      <label style="display:block;font-weight:600;margin-top:12px;">📋 Dán danh sách hoặc bảng NotebookLM
+        <textarea id="cn-notebook-raw" rows="7" placeholder="学习 — học tập&#10;认真 — nghiêm túc&#10;提高 — nâng cao&#10;&#10;Hoặc dán bảng Markdown..." style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-top:5px;border:1px solid #9caec0;border-radius:8px;font-size:15px;"></textarea>
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" onclick="cnNotebookParse()" style="background:#6a4c93;color:white;border:0;border-radius:8px;padding:10px;flex:1;">🔍 Phân tích / thử trích xuất</button><button type="button" onclick="cnNotebookSaveGuide()" style="background:#2e7d32;color:white;border:0;border-radius:8px;padding:10px;flex:1;">💾 Lưu mẫu hướng dẫn</button><button type="button" onclick="cnNotebookClearGuide()" style="background:#757575;color:white;border:0;border-radius:8px;padding:10px;flex:1;">🗑️ Xóa mẫu đã lưu</button></div>
+      <div id="cn-notebook-guide-status" style="font-size:13px;margin:7px 0;color:#455a64;"></div>
+      <div id="cn-notebook-review" style="margin-top:10px;"></div>
     </section>
     <button type="button" id="toggle-notebook-parser-tools" aria-expanded="false" aria-controls="notebook-parser-tools" onclick="toggleNotebookParserTools()" style="margin:10px 0 0;background:#607d8b;color:white;border:0;border-radius:8px;padding:10px 14px;width:100%;font-size:15px;">⚙️ Hiện bộ xử lý NotebookLM (khi cần chỉnh sửa)</button>
     <div id="notebook-parser-tools" hidden style="display:none;margin:12px 0;padding:12px;border:1px solid #7c9bce;border-radius:10px;background:#f4f8ff;">
@@ -2113,64 +2133,64 @@ Hãy chú ý định dạng thực tế ở trên và tạo mã chịu được 
         }
 
         function linkVocabToSubtitles() {
-            const vocabText = document.getElementById("notebooklm-vocab").value;
-            const vocabArray = parseNotebookVocabText(vocabText);
+            const vocabText = document.getElementById("notebooklm-vocab")?.value || "";
             const container = document.getElementById("linked-vocab-list");
-            container.innerHTML = "";
+            if (container) container.innerHTML = "";
 
+            // Kết hợp parser cũ với từ đã được nhập từ khu vực NotebookLM tiếng Trung.
+            let parsed = [];
+            try { parsed = parseNotebookVocabText(vocabText) || []; } catch (_) {}
+            const candidates = [];
+            parsed.forEach(item => candidates.push({word:item.korean || item.word || item.chinese, meaning:item.meaning || item.vi || ""}));
+            (Array.isArray(vocabList) ? vocabList : []).forEach(item => {
+                if (item && item.word && /[\u3400-\u9fff\u{20000}-\u{2a6df}]/u.test(item.word))
+                    candidates.push({word:item.word, meaning:item.meaning || ""});
+            });
+            const unique = new Map();
+            candidates.forEach(item => { const word=String(item.word||'').trim(); if(word) unique.set(word.replace(/\s/g,''),{word,meaning:String(item.meaning||'').trim()}); });
+            const vocabArray = [...unique.values()];
             if (!vocabArray.length) {
-                container.textContent = "Không tìm thấy từ vựng hợp lệ. Hãy kiểm tra bảng có cột Từ vựng và Nghĩa tiếng Việt.";
+                if (container) container.textContent = "Không có từ tiếng Trung trong danh sách. Hãy trích xuất và thêm từ từ khu vực NotebookLM trước, hoặc dán danh sách vào ô NotebookLM cũ.";
+                alert("Không tìm thấy từ tiếng Trung để liên kết. Hãy thêm từ từ khu vực NotebookLM trước.");
                 return;
             }
-
-            let linkedCount = 0;
-            vocabArray.forEach(word => {
-                const matchIndex = findBestSubtitleIndex(word.korean);
-
-                if (matchIndex !== -1) {
-                    linkedCount++;
-                    let existing = vocabList.find(v => v.word === word.korean);
-
-                    if (!existing) {
-                        vocabList.push({
-                            word: word.korean,
-                            meaning: word.meaning,
-                            savedIndexes: [matchIndex],
-                            isLinked: true
-                        });
-                    } else {
-                        existing.meaning = word.meaning;
-                        existing.savedIndexes = [matchIndex];
-                        existing.isLinked = true;
-                    }
+            if (!Array.isArray(subtitleData) || !subtitleData.length) {
+                if (container) container.textContent = "Bạn chưa tải phụ đề cho video. Từ vựng vẫn được giữ trong sổ từ.";
+                alert(`Đã nhận ${vocabArray.length} từ, nhưng chưa có phụ đề để liên kết.`);
+                return;
+            }
+            let linkedWords=0, linkedPositions=0, unmatched=0;
+            const norm = text => String(text||'').normalize('NFKC').replace(/[\s\u200b-\u200d]/g,'').replace(/[，。！？、；：,.!?;:'"“”‘’（）()【】\[\]{}<>]/g,'');
+            vocabArray.forEach(item => {
+                const word=String(item.word||'').trim(), key=norm(word);
+                if(!key) return;
+                const matches=[];
+                subtitleData.forEach((sub,idx)=>{
+                    const zh=typeof getChineseText==='function'?getChineseText(sub):String(sub.originalText||sub.chineseText||sub.text||'');
+                    if(norm(zh).includes(key)) matches.push(idx);
+                });
+                let existing=Array.isArray(vocabList)?vocabList.find(v=>norm(v.word)===key):null;
+                if(!existing){existing={word,meaning:item.meaning||'',savedIndexes:[],subtitleAnchors:[],isLinked:false,source:'NotebookLM'};vocabList.push(existing);}
+                if(item.meaning) existing.meaning=item.meaning;
+                if(!Array.isArray(existing.savedIndexes)) existing.savedIndexes=[];
+                if(!Array.isArray(existing.subtitleAnchors)) existing.subtitleAnchors=[];
+                matches.forEach(idx=>{
+                    if(!existing.savedIndexes.includes(idx)){existing.savedIndexes.push(idx);linkedPositions++;}
+                    const sub=subtitleData[idx];
+                    if(!existing.subtitleAnchors.some(a=>Number(a.subtitleIndex)===idx)) existing.subtitleAnchors.push({subtitleIndex:idx,startTime:Number(sub.startTime)||0,endTime:Number(sub.endTime)>Number(sub.startTime)?Number(sub.endTime):(Number(sub.startTime)||0)+2,chineseText:typeof getChineseText==='function'?getChineseText(sub):String(sub.originalText||sub.chineseText||sub.text||'')});
+                });
+                existing.isLinked=matches.length>0;
+                if(matches.length) linkedWords++; else unmatched++;
+                if(container){
+                    const div=document.createElement('div');div.className='clickable-vocab';div.style.cssText='padding:8px;border-bottom:1px solid #ddd;';
+                    const label=document.createElement('span');label.textContent=`${word} — ${item.meaning||existing.meaning||'Chưa có nghĩa'} (${matches.length} vị trí)`;div.appendChild(label);
+                    if(matches.length){const btn=document.createElement('button');btn.type='button';btn.textContent='▶ Đến phụ đề';btn.style.cssText='width:auto;margin:5px;padding:5px 9px;background:#1976d2;color:white;border:0;border-radius:5px;';btn.onclick=()=>{const idx=matches[0];currentSubtitleIndex=idx;try{if(youtubePlayer&&subtitleData[idx])youtubePlayer.seekTo(subtitleData[idx].startTime,true);}catch(_){}if(typeof updateChineseSubtitleDisplay==='function')updateChineseSubtitleDisplay(idx);if(typeof highlightSubtitle==='function')highlightSubtitle(idx);};div.appendChild(btn);}
+                    container.appendChild(div);
                 }
-
-                const div = document.createElement("div");
-                div.textContent = `${word.korean} - ${word.meaning}`;
-                div.className = "clickable-vocab";
-
-                div.onclick = () => {
-                    const index = findBestSubtitleIndex(word.korean);
-                    if (index !== -1) {
-                        if (youtubePlayer) {
-                            youtubePlayer.seekTo(subtitleData[index].startTime, true);
-                            youtubePlayer.playVideo();
-                        }
-                        highlightSubtitle(index);
-                        if (vocabTTSMode) {
-                            readTextDual(`${word.korean} - ${word.meaning}`, null, VOCAB_TTS_RATE);
-                        }
-                    } else {
-                        alert("Không tìm thấy từ gần giống trong phụ đề. Từ vẫn được giữ trong danh sách NotebookLM.");
-                    }
-                };
-                container.appendChild(div);
             });
-
-            saveToHistory(currentVideoUrl, null, vocabText);
-            saveVocabToHistory();
-            displayVocabList();
-            alert(`Đã đọc ${vocabArray.length} từ có nghĩa tiếng Việt. Liên kết được ${linkedCount} từ với phụ đề.`);
+            try { window.ChineseStudy?.refreshLexicon?.(); saveVocabToHistory(); displayVocabList(); window.displayVocabList?.(); if(typeof updateChineseSubtitleDisplay==='function'&&subtitleData.length)updateChineseSubtitleDisplay(currentSubtitleIndex); } catch(e){console.warn('Liên kết từ vựng:',e);}
+            try { if(currentVideoUrl) saveToHistory(currentVideoUrl,null,vocabText); } catch(_) {}
+            alert(`Đã xử lý ${vocabArray.length} từ. Liên kết ${linkedWords} từ với ${linkedPositions} vị trí phụ đề; ${unmatched} từ chưa tìm thấy trong phụ đề.`);
         }
 
         function checkManualSeek() {
@@ -6235,7 +6255,7 @@ document.addEventListener("keydown", (e) => {
   let floatingLookupAnchorToken = null;
   let floatingLookupEnabled = false;
   let floatingLookupPopup = null;
-  let phraseMode = false;
+  let phraseMode = true;
   let phraseStart = null;
   let flashQueue = [];
   let flashIndex = 0;
@@ -6393,7 +6413,7 @@ document.addEventListener("keydown", (e) => {
     ];
     if (!cachedLexiconTrie) {
       const root = Object.create(null);
-      const words = new Set([...Object.keys(dict), ...Object.keys(offlineDict), ...builtins]);
+      const words = new Set([...Object.keys(dict), ...Object.keys(offlineDict), ...(Array.isArray(vocabList)?vocabList.map(v=>v&&v.word).filter(Boolean):[]), ...builtins]);
       for (const word of words) {
         if (!word || !hanRE.test(word)) continue;
         let node = root;
@@ -6609,8 +6629,8 @@ document.addEventListener("keydown", (e) => {
     if(phraseMode) {
       if(!phraseStart || phraseStart.subtitleIndex!==subtitleIndex) { phraseStart={subtitleIndex,tokenIndex}; document.getElementById('cs-phrase-status').textContent='Đã chọn điểm đầu: '+token.text+'. Nhấn từ cuối cụm.'; return; }
       const a=Math.min(phraseStart.tokenIndex,tokenIndex), b=Math.max(phraseStart.tokenIndex,tokenIndex);
-      const phrase=allTokens.slice(a,b+1).filter(x=>x.isWordLike && hanRE.test(x.text)).map(x=>x.text).join(''); phraseMode=false; phraseStart=null;
-      document.getElementById('cs-phrase-toggle').textContent='Chọn cụm từ: Tắt'; document.getElementById('cs-phrase-status').textContent='Đã chọn: '+phrase;
+      const phrase=allTokens.slice(a,b+1).filter(x=>x.isWordLike && hanRE.test(x.text)).map(x=>x.text).join(''); phraseStart=null;
+      document.getElementById('cs-phrase-toggle').textContent='Chọn cụm từ: Bật'; document.getElementById('cs-phrase-status').textContent='Đã chọn: '+phrase+'. Chọn cụm tiếp theo hoặc tắt chế độ chọn cụm.';
       lookupChineseWord(phrase,subtitleIndex,tokenElement); return;
     }
     lookupChineseWord(token.text,subtitleIndex,tokenElement);
@@ -6630,6 +6650,13 @@ document.addEventListener("keydown", (e) => {
       html+=`<div class="subtitle-line ${active?'current':''}"><div class="cs-subtitle-zh">${renderSubtitleTokens(text,i)}</div>${vietnameseLine}<div class="cs-subtitle-tools"><span class="cs-subtitle-time">${formatTime(sub.startTime)}</span></div></div>`;
     }
     host.innerHTML=html;
+    // Tự hiển thị nghĩa NotebookLM của những từ đã liên kết với câu phụ đề hiện tại.
+    // Panel vocab-info-display nằm ngay phía trên video và cập nhật mỗi lần đổi câu.
+    try {
+      if (typeof displayVocabInfoForPlaybackIndex === 'function') {
+        displayVocabInfoForPlaybackIndex(index);
+      }
+    } catch (e) { console.warn('Không cập nhật panel từ vựng theo phụ đề:', e); }
     if (floatingLookupEnabled) {
       if (Number(floatingLookupAnchorSubtitle) !== Number(index)) {
         hideFloatingLookup();
@@ -6696,7 +6723,8 @@ document.addEventListener("keydown", (e) => {
       const word=document.createElement('button'); word.className='cs-token'; word.textContent=item.word; word.onclick=()=>lookupChineseWord(item.word);
       const py=document.createElement('div'); py.className='cs-meta'; const meta=dict[item.word]||offlineDict[item.word]||item; const version=document.getElementById('cs-hsk-version')?.value||'both'; const level=version==='2'?meta.hsk20:version==='3'?meta.hsk30:(meta.hsk30||meta.hsk20); py.textContent=(item.pinyin||meta.pinyin||'Pinyin chưa có')+' · '+(level?'HSK '+level:'Chưa xác định HSK');
       const meaning=document.createElement('input'); meaning.value=item.meaning||meta.meaning||''; meaning.placeholder='Nhập nghĩa tiếng Việt'; meaning.onchange=()=>{item.meaning=meaning.value; const d={...(dict[item.word]||offlineDict[item.word]||{word:item.word})}; d.meaning=meaning.value;d.source='manual';dict[item.word]=d;setDict(dict);saveVocabToHistory();};
-      left.append(word,py,meaning); const del=document.createElement('button');del.textContent='Xóa';del.onclick=()=>{vocabList.splice(originalIndex,1);saveVocabToHistory();renderChineseVocabList();updateChineseSubtitleDisplay(currentSubtitleIndex);};
+      const linkedIndexes=Array.isArray(item.savedIndexes)?item.savedIndexes:[]; const linkBtn=document.createElement('button'); linkBtn.type='button'; linkBtn.textContent='🔗 '+linkedIndexes.length+' phụ đề'; linkBtn.style.cssText='width:auto;margin:4px;padding:6px 9px;background:#1976d2;color:white;border:0;border-radius:6px;'; linkBtn.onclick=()=>{if(!linkedIndexes.length){alert('Từ này chưa được liên kết với phụ đề. Hãy dùng nút Liên kết phụ đề bên dưới.');return;}const idx=linkedIndexes[0];currentSubtitleIndex=idx;try{if(typeof youtubePlayer!=='undefined'&&youtubePlayer&&subtitleData[idx])youtubePlayer.seekTo(subtitleData[idx].startTime,true);}catch(_){}updateChineseSubtitleDisplay(idx);};
+      left.append(word,py,meaning,linkBtn); const del=document.createElement('button');del.textContent='Xóa';del.onclick=()=>{vocabList.splice(originalIndex,1);saveVocabToHistory();renderChineseVocabList();updateChineseSubtitleDisplay(currentSubtitleIndex);};
       row.append(left,del);host.appendChild(row);
     });
   }
@@ -6740,14 +6768,14 @@ document.addEventListener("keydown", (e) => {
     const detail=document.getElementById('vocab-info-display'); if(detail){detail.innerHTML='Nhấn vào một từ tiếng Trung trong phụ đề để xem Pinyin và nghĩa.';if(detail.parentElement)detail.parentElement.style.display='none';}
     const toggle=document.getElementById('vocab-display-mode');if(toggle){toggle.checked=true;const lab=toggle.closest('label');if(lab&&lab.lastChild&&lab.lastChild.nodeType===3)lab.lastChild.textContent=' Chỉ hiển thị thông tin từ điển';}
     const target=document.getElementById('subtitle-display');
-    if(target){const panel=document.createElement('section');panel.className='cs-panel';panel.id='chinese-study-tools';panel.innerHTML=`<h3>中文 ChineseStudy V1.1 – Công cụ học tiếng Trung</h3><div class="cs-row"><label>Kiểu chữ<select id="cs-script-mode"><option value="both">Song song giản thể / phồn thể</option><option value="simplified">Giản thể</option><option value="traditional">Chỉ phồn thể (chuyển đổi cơ bản)</option></select></label><label>Bộ HSK<select id="cs-hsk-version"><option value="both">HSK 2.0 + HSK 3.0</option><option value="2">HSK 2.0</option><option value="3">HSK 3.0</option></select></label><label>Lọc cấp độ<select id="cs-hsk-level"><option value="all">Tất cả cấp độ</option><option value="1">HSK 1</option><option value="2">HSK 2</option><option value="3">HSK 3</option><option value="4">HSK 4</option><option value="5">HSK 5</option><option value="6">HSK 6</option><option value="7">HSK 7</option><option value="8">HSK 8</option><option value="9">HSK 9</option></select></label></div><div class="cs-row" style="margin-top:8px"><button id="cs-phrase-toggle" type="button">Chọn cụm từ: Tắt</button><button type="button" onclick="ChineseStudy.openFlashcards()">🗂 Ôn flashcard</button><button type="button" onclick="ChineseStudy.exportData()">⬇ Xuất dữ liệu</button></div><div id="cs-phrase-status" class="cs-meta">Nhấn từng từ để tra cứu. Bật chọn cụm để chọn điểm đầu và điểm cuối.</div><div id="chinese-word-detail" class="cs-panel" style="display:none;background:white;margin-top:10px"></div><div class="cs-row"><label>Nhập dữ liệu HSK JSON<input id="cs-hsk-file" type="file" accept=".json,application/json"></label><label>Nhập từ điển JSON<input id="cs-dict-file" type="file" accept=".json,application/json"></label></div><div class="cs-meta">Từ điển có bộ từ khởi đầu, cache nghĩa trực tuyến và ưu tiên nghĩa nội bộ cho chữ đơn đa nghĩa. HSK 2.0/3.0 nhận JSON dạng {"version":"2.0 + 3.0","entries":[{"word":"学习","hsk20":3,"hsk30":3,"pinyin":"xuéxí","meaning":"học tập"}]}. Bộ HSK đầy đủ chưa được nhúng; cần nhập dữ liệu có nguồn xác thực. Chuyển phồn thể hiện là ánh xạ ký tự phổ biến, chưa thay thế OpenCC đầy đủ.</div>`;
+    if(target){const panel=document.createElement('section');panel.className='cs-panel';panel.id='chinese-study-tools';panel.innerHTML=`<h3>中文 ChineseStudy V1.1 – Công cụ học tiếng Trung</h3><div class="cs-row"><label>Kiểu chữ<select id="cs-script-mode"><option value="both">Song song giản thể / phồn thể</option><option value="simplified">Giản thể</option><option value="traditional">Chỉ phồn thể (chuyển đổi cơ bản)</option></select></label><label>Bộ HSK<select id="cs-hsk-version"><option value="both">HSK 2.0 + HSK 3.0</option><option value="2">HSK 2.0</option><option value="3">HSK 3.0</option></select></label><label>Lọc cấp độ<select id="cs-hsk-level"><option value="all">Tất cả cấp độ</option><option value="1">HSK 1</option><option value="2">HSK 2</option><option value="3">HSK 3</option><option value="4">HSK 4</option><option value="5">HSK 5</option><option value="6">HSK 6</option><option value="7">HSK 7</option><option value="8">HSK 8</option><option value="9">HSK 9</option></select></label></div><div class="cs-row" style="margin-top:8px"><button id="cs-phrase-toggle" type="button">Chọn cụm từ: Bật</button><button type="button" onclick="ChineseStudy.openFlashcards()">🗂 Ôn flashcard</button><button type="button" onclick="ChineseStudy.exportData()">⬇ Xuất dữ liệu</button></div><div id="cs-phrase-status" class="cs-meta">Chế độ chọn cụm đang bật mặc định. Nhấn từ đầu tiên, sau đó nhấn từ cuối cụm để tra cứu.</div><div id="chinese-word-detail" class="cs-panel" style="display:none;background:white;margin-top:10px"></div><div class="cs-row"><label>Nhập dữ liệu HSK JSON<input id="cs-hsk-file" type="file" accept=".json,application/json"></label><label>Nhập từ điển JSON<input id="cs-dict-file" type="file" accept=".json,application/json"></label></div><div class="cs-meta">Từ điển có bộ từ khởi đầu, cache nghĩa trực tuyến và ưu tiên nghĩa nội bộ cho chữ đơn đa nghĩa. HSK 2.0/3.0 nhận JSON dạng {"version":"2.0 + 3.0","entries":[{"word":"学习","hsk20":3,"hsk30":3,"pinyin":"xuéxí","meaning":"học tập"}]}. Bộ HSK đầy đủ chưa được nhúng; cần nhập dữ liệu có nguồn xác thực. Chuyển phồn thể hiện là ánh xạ ký tự phổ biến, chưa thay thế OpenCC đầy đủ.</div>`;
       target.parentNode.insertBefore(panel,target.nextSibling);
       const dictInput=document.getElementById('cs-dict-file');
       if(dictInput){dictInput.accept='.json,.json.gz,.gz,application/json,application/gzip';const label=dictInput.closest('label');if(label&&label.firstChild)label.firstChild.textContent='Nhập từ điển JSON hoặc .json.gz';}
       const offlineHint=document.createElement('div');offlineHint.className='cs-meta';offlineHint.textContent='Từ điển lớn .json.gz được lưu cục bộ trong IndexedDB, không chiếm giới hạn localStorage.';panel.appendChild(offlineHint);
       const attribution=document.createElement('div');attribution.id='cs-dictionary-attribution';attribution.className='cs-meta';attribution.style.display='none';panel.appendChild(attribution);
       document.getElementById('cs-script-mode').onchange=()=>{if(Array.isArray(subtitleData)&&subtitleData.length)updateChineseSubtitleDisplay(Math.max(0,currentSubtitleIndex));};
-      document.getElementById('cs-phrase-toggle').onclick=()=>{phraseMode=!phraseMode;phraseStart=null;document.getElementById('cs-phrase-toggle').textContent='Chọn cụm từ: '+(phraseMode?'Bật':'Tắt');document.getElementById('cs-phrase-status').textContent=phraseMode?'Nhấn từ đầu tiên, sau đó nhấn từ cuối cụm.':'Chế độ chọn cụm đã tắt.';};
+      document.getElementById('cs-phrase-toggle').onclick=()=>{phraseMode=!phraseMode;phraseStart=null;document.getElementById('cs-phrase-toggle').textContent='Chọn cụm từ: '+(phraseMode?'Bật':'Tắt');document.getElementById('cs-phrase-status').textContent=phraseMode?'Chế độ chọn cụm đã bật. Nhấn từ đầu tiên, sau đó nhấn từ cuối cụm.':'Chế độ chọn cụm đã tắt. Nhấn từng từ để tra cứu riêng.';};
       document.getElementById('cs-hsk-file').onchange=e=>e.target.files[0]&&saveChineseHskFile(e.target.files[0]);
       document.getElementById('cs-hsk-version').onchange=()=>renderChineseVocabList();document.getElementById('cs-hsk-level').onchange=()=>renderChineseVocabList();
       dictInput.onchange=e=>{const f=e.target.files[0];if(!f)return;importDictionaryFile(f).catch(err=>alert('Không thể nhập từ điển: '+(err?.message||err))).finally(()=>{e.target.value='';});};
@@ -6807,7 +6835,7 @@ document.addEventListener("keydown", (e) => {
   window.readTextDual=(text,callback,speed)=>{const clean=String(text||'');const ix=clean.indexOf(' - ');const zh=ix>=0?clean.slice(0,ix):clean;const vi=ix>=0?clean.slice(ix+3):'';speakChinese(zh,()=>{if(vi)speakVietnameseText(vi,callback,speed);else callback?.();},speed);};
   window.ChineseStudy={
     selectToken,lookup:lookupChineseWord,toTraditional, speak:(text)=>speakChinese(text), speakChineseText:(text)=>speakChinese(text), speakVietnameseText:(text)=>speakVietnameseText(text), speakChineseSubtitle, speakVietnameseSubtitle, saveCurrentWord,openExternal:(word)=>window.open(`https://www.google.com/search?q=${encodeURIComponent(word+' nghĩa tiếng Việt')}`,'_blank','noopener'),
-    openFlashcards,revealFlashcard:()=>{flashRevealed=true;renderFlashcard();},grade:gradeFlashcard,segment:segmentChinese,parseSRT:parseSRTChinese,
+    openFlashcards,revealFlashcard:()=>{flashRevealed=true;renderFlashcard();},grade:gradeFlashcard,segment:segmentChinese,refreshLexicon:()=>{cachedLexiconTrie=null;},parseSRT:parseSRTChinese,
     exportData:()=>{const payload={app:'ChineseStudy',version:1,exportedAt:new Date().toISOString(),dictionary:dict,hsk:hskData,vocabulary:vocabList||[],flashcards:(()=>{try{return JSON.parse(localStorage.getItem(STORE.cards)||'{}')}catch(_){return {}}})()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ChineseStudy_backup.json';a.click();URL.revokeObjectURL(a.href);}
   };
 
@@ -7081,6 +7109,33 @@ document.addEventListener("keydown", (e) => {
     try { displayHistory(); } catch(_) {}
     setInterval(()=>saveCurrentChinesePlaybackProgress(false),5000);
   });
+})();
+
+
+// ===== NotebookLM Chinese vocabulary extractor (additive; keeps existing Korean parser) =====
+(function(){
+ const $=id=>document.getElementById(id), STORE='cnNotebookGuidanceV1';
+ let confirmed={word:'',meaning:''}, selectionText='';
+ const han=/[\u3400-\u4dbf\u4e00-\u9fff\u{20000}-\u{2a6df}]/u;
+ function clean(s){return String(s||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/\*\*/g,'').replace(/__/g,'').replace(/[*_~`]/g,'').replace(/\s+/g,' ').trim();}
+ function cleanChineseWord(s){s=clean(s).replace(/^\s*(?:\d+[.)、]|[-*•])\s*/,'');s=s.replace(/[（(][^）)]*[）)]/g,' ').trim();const chunks=s.match(/[\u3400-\u4dbf\u4e00-\u9fff\u{20000}-\u{2a6df}]+/gu);return chunks?chunks.join('').trim():s;}
+ function cleanVietnameseMeaning(s){s=clean(s).replace(/^\s*(?:HSK\s*[1-9](?:\s*[-–—,，/]\s*[1-9])?\s*[:：-]?\s*)+/i,'');s=s.replace(/\bHSK\s*[1-9](?:\s*[-–—,，/]\s*[1-9])?\b/ig,' ').replace(/\s+/g,' ').replace(/^[|:：—–-]+|[|:：—–-]+$/g,'').trim();return s;}
+ window.cnNotebookConfirm=function(role){const id=role==='word'?'cn-notebook-word-paste':'cn-notebook-meaning-paste';const val=role==='word'?cleanChineseWord($(id)?.value):cleanVietnameseMeaning($(id)?.value);if(!val){alert('Ô nhập đang trống hoặc không có nội dung hợp lệ.');return;}confirmed[role]=val;$(id).value=val;updatePair();};
+ function updatePair(){const status=$('cn-notebook-pair-status');status.textContent=`Tiếng Trung: ${confirmed.word||'chưa xác nhận'} | Nghĩa: ${confirmed.meaning||'chưa xác nhận'}`;if(confirmed.word&&confirmed.meaning){$('cn-notebook-raw').value=confirmed.word+' — '+confirmed.meaning;cnNotebookParse();}}
+ window.cnNotebookCaptureSelection=function(role){let text='';try{text=String(window.getSelection()?.toString()||'').trim();}catch(_){}if(!text)text=selectionText;if(!text){alert('Không lấy được vùng chọn. Hãy sao chép rồi dán vào ô tiếng Trung hoặc nghĩa tiếng Việt. Dữ liệu hiện có vẫn được giữ.');return;}const input=role==='word'?$('cn-notebook-word-paste'):$('cn-notebook-meaning-paste');input.value=text;cnNotebookConfirm(role);};
+ document.addEventListener('selectionchange',()=>{try{const t=String(window.getSelection()?.toString()||'').trim();if(t)selectionText=t;}catch(_){}});
+ function parse(text){const out=[],seen=new Set();let headers=null;const add=(w,m)=>{w=cleanChineseWord(w);m=cleanVietnameseMeaning(m);if(!han.test(w)||!m||han.test(m)&&!/[A-Za-zÀ-ỹĐđ]/.test(m))return;if(!w||w.length>40||m.length>300)return;const k=w.replace(/\s/g,'');if(seen.has(k))return;seen.add(k);out.push({word:w,meaning:m});};
+ text.split(/\r?\n/).forEach(line=>{let r=clean(line);if(!r)return;r=r.replace(/^\s*(?:\d+[.)、]|[-*•])\s*/,'');
+ if(r.includes('|')){const cells=r.replace(/^\|/,'').replace(/\|$/,'').split('|').map(clean);if(cells.every(x=>/^:?-{2,}:?$/.test(x)))return;const h=cells.map(x=>x.toLowerCase());if(h.some(x=>/中文|汉字|漢字|中国语|词语|词汇|từ tiếng trung|từ vựng/.test(x))&&h.some(x=>/越南语|tiếng việt|nghĩa|meaning/.test(x))){headers=cells.map(x=>x.toLowerCase());return;}if(headers){let wi=headers.findIndex(x=>/中文|汉字|中国语|词语|词汇|từ tiếng trung|từ vựng/.test(x));let mi=headers.findIndex(x=>/越南语|tiếng việt|nghĩa|meaning/.test(x));if(wi>=0&&mi>=0&&cells[wi]&&cells[mi])add(cells[wi],cells[mi]);return;}if(cells.length>=2){const hi=cells.findIndex(x=>han.test(x));if(hi>=0){let mi=cells.findIndex((x,i)=>i!==hi&&/[A-Za-zÀ-ỹĐđ]/.test(x));if(mi>=0)add(cells[hi],cells[mi]);}}return;}
+ if(!han.test(r)||/^(?:ví dụ|例句|注释|说明|ghi chú|context|example)[:：]/i.test(r))return;
+ let match=r.match(/^(.+?)\s*(?:[—–-]|[:：])\s*(.+)$/);if(match){add(match[1],match[2]);return;}
+ match=r.match(/^(.+?)\s+[（(]([^）)]+)[）)]\s*$/);if(match&&han.test(match[1]))add(match[1],match[2]);
+ });return out;}
+ window.cnNotebookParse=function(){const raw=$('cn-notebook-raw').value;let parsed=parse(raw);if(!parsed.length&&confirmed.word&&confirmed.meaning)parsed=[{word:confirmed.word,meaning:confirmed.meaning}];const box=$('cn-notebook-review');if(!parsed.length){box.innerHTML='<p style="color:#b71c1c;">Không nhận diện được cặp từ. Hãy dùng định dạng 中文 — nghĩa tiếng Việt hoặc bảng có cột từ và nghĩa. Nội dung nhập vẫn được giữ.</p>';return;}box.innerHTML='<strong>Kiểm tra trước khi thêm ('+parsed.length+' mục)</strong><div id="cn-notebook-rows"></div><button type="button" onclick="cnNotebookAddReviewed()" style="background:#16734a;color:white;border:0;border-radius:8px;padding:11px;width:100%;margin-top:8px;">➕ Thêm các từ đã kiểm tra vào danh sách từ vựng</button>';const rows=$('cn-notebook-rows');parsed.forEach((item,i)=>{const row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0';const w=document.createElement('input'),m=document.createElement('input');w.value=item.word;m.value=item.meaning;w.dataset.idx=i;m.dataset.idx=i;w.className='cn-review-word';m.className='cn-review-meaning';w.setAttribute('aria-label','Từ tiếng Trung');m.setAttribute('aria-label','Nghĩa tiếng Việt');row.append(w,m);rows.append(row);});};
+ window.cnNotebookAddReviewed=function(){const words=[...document.querySelectorAll('.cn-review-word')],means=[...document.querySelectorAll('.cn-review-meaning')];let added=0,updated=0,invalid=0,linked=0;words.forEach((w,i)=>{const word=clean(w.value),meaning=clean(means[i]?.value);if(!han.test(word)||!meaning){invalid++;return;}let existing=Array.isArray(vocabList)?vocabList.find(v=>String(v.word||'').replace(/\s/g,'')===word.replace(/\s/g,'')):null;if(!existing){existing={word,meaning,savedIndexes:[],subtitleAnchors:[],isLinked:true,source:'NotebookLM'};vocabList.push(existing);added++;}else{if(existing.meaning!==meaning){existing.meaning=meaning;updated++;}existing.isLinked=true;existing.source=existing.source||'NotebookLM';}if(!Array.isArray(existing.savedIndexes))existing.savedIndexes=[];if(Array.isArray(subtitleData)){subtitleData.forEach((sub,idx)=>{const zh=typeof getChineseText==='function'?getChineseText(sub):String(sub.originalText||sub.chineseText||sub.text||'');if(zh.includes(word)&&!existing.savedIndexes.includes(idx)){existing.savedIndexes.push(idx);linked++;}});}if(!Array.isArray(existing.subtitleAnchors))existing.subtitleAnchors=[];if(Array.isArray(subtitleData)){existing.savedIndexes.forEach(idx=>{if(subtitleData[idx]&&!existing.subtitleAnchors.some(a=>Number(a.subtitleIndex)===idx))existing.subtitleAnchors.push({subtitleIndex:idx,startTime:Number(subtitleData[idx].startTime)||0,endTime:Number(subtitleData[idx].endTime)>Number(subtitleData[idx].startTime)?Number(subtitleData[idx].endTime):(Number(subtitleData[idx].startTime)||0)+2,chineseText:typeof getChineseText==='function'?getChineseText(subtitleData[idx]):String(subtitleData[idx].originalText||subtitleData[idx].chineseText||subtitleData[idx].text||'')});});}});try{window.ChineseStudy?.refreshLexicon?.();saveVocabToHistory();displayVocabList();window.displayVocabList?.();if(Array.isArray(subtitleData)&&subtitleData.length)window.updateSubtitleDisplay?.(currentSubtitleIndex);}catch(e){console.warn('NotebookLM vocab integration:',e);}alert(`Đã thêm ${added} từ; cập nhật ${updated} từ trùng; liên kết ${linked} vị trí phụ đề; bỏ qua ${invalid} mục không hợp lệ.`);};
+ window.cnNotebookSaveGuide=function(){try{localStorage.setItem(STORE,JSON.stringify({raw:$('cn-notebook-raw').value,word:$('cn-notebook-word-paste').value,meaning:$('cn-notebook-meaning-paste').value}));$('cn-notebook-guide-status').textContent='✓ Đã lưu mẫu hướng dẫn trên thiết bị này.';}catch(e){$('cn-notebook-guide-status').textContent='⚠ Không lưu được: '+e.message;}};
+ window.cnNotebookClearGuide=function(){if(!confirm('Xóa mẫu hướng dẫn đã lưu?'))return;try{localStorage.removeItem(STORE);$('cn-notebook-guide-status').textContent='Đã xóa mẫu đã lưu.';}catch(e){$('cn-notebook-guide-status').textContent='Không xóa được: '+e.message;}};
+ document.addEventListener('DOMContentLoaded',()=>{try{const saved=JSON.parse(localStorage.getItem(STORE)||'null');if(saved){$('cn-notebook-raw').value=saved.raw||'';$('cn-notebook-word-paste').value=saved.word||'';$('cn-notebook-meaning-paste').value=saved.meaning||'';$('cn-notebook-guide-status').textContent='Đã tải mẫu hướng dẫn đã lưu.';}}catch(e){console.warn('CN Notebook guide load:',e);}});
 })();
 
 </script>
